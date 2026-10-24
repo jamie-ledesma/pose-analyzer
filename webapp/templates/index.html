@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>USC Pre-PT Club</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <img class="logo" src="{{ url_for('static', filename='usc-prept-logo.webp') }}"
+           alt="USC Pre-Physical Therapy Club" width="36" height="36">
+      <nav class="modes" aria-label="Video source">
+        <button class="mode" data-mode="example" aria-current="page">Example</button>
+        <button class="mode" data-mode="live">Live<span class="long"> camera</span></button>
+        <button class="mode" data-mode="upload">Upload</button>
+      </nav>
+      <div class="switcher">
+        <label>
+          <span class="visually-hidden">Exercise</span>
+          <select id="exercise">
+            <option value="squat">Squat</option>
+            <option value="elbows">Elbows</option>
+          </select>
+        </label>
+        <label class="model-pick">
+          <span class="visually-hidden">Pose model</span>
+          <select id="model">
+            <option value="full">Full model</option>
+            <option value="heavy">Heavy model</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main class="canvas">
+    <div class="title-row">
+      <div class="title-text">
+        <h1 id="title">Example set</h1>
+        <p class="finding" id="finding"></p>
+      </div>
+      <div class="title-actions" id="title-actions">
+        <a class="btn" id="dl-video" href="#" download hidden>
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8m0 0L5 7.5m3 3l3-3M3 13.5h10"/></svg>
+          Video
+        </a>
+        <a class="btn" id="dl-csv" href="#" download hidden>
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v8m0 0L5 7.5m3 3l3-3M3 13.5h10"/></svg>
+          CSV
+        </a>
+        <button class="btn primary" id="primary"></button>
+      </div>
+    </div>
+
+    <div class="grid" id="grid">
+      <!-- The video: example, live stream or upload, each with its own empty and progress states -->
+      <section class="panel media" id="media" aria-label="Video">
+        <video id="example-video" class="media-el" controls playsinline muted loop hidden></video>
+        <video id="upload-video" class="media-el" controls playsinline hidden></video>
+        <img id="live-img" class="media-el" alt="Live camera with pose overlay" hidden>
+
+        <div class="media-state" id="progress" hidden>
+          <p class="state-title" id="progress-label">Preparing the example</p>
+          <div class="track"><div class="track-fill" id="progress-bar"></div></div>
+          <p class="state-note num" id="progress-note"></p>
+        </div>
+
+        <div class="media-state" id="live-off" hidden>
+          <p class="state-title">Camera is off</p>
+          <p class="state-note">Stand back so your whole body is in frame, head to feet, facing the camera.</p>
+          {% if camera_is_file %}<p class="state-note">Test mode: a video file is standing in for the camera.</p>{% endif %}
+          <button class="btn primary" id="live-start">Start camera</button>
+        </div>
+
+        <label class="media-state dropzone" id="dropzone" hidden>
+          <input type="file" id="file-input" accept="video/*,.mp4,.mov,.m4v,.avi,.webm,.mkv" hidden>
+          <p class="state-title">Drop a video here</p>
+          <p class="state-note">MP4 or MOV from your phone, filmed from the front with your whole body in frame.</p>
+          <button type="button" class="btn primary" id="choose-file">Choose a video</button>
+        </label>
+
+        <p class="media-error" id="media-error" role="alert" hidden></p>
+      </section>
+
+      <!-- Headline figures: one card split into cells -->
+      <section class="panel kpis" aria-label="Summary">
+        <div class="kpi lead">
+          <p class="kpi-label" id="k0-label">Reps counted</p>
+          <p class="kpi-value num" id="k0-value">–</p>
+          <p class="kpi-sub" id="k0-sub"></p>
+        </div>
+        <div class="kpi">
+          <p class="kpi-label" id="k1-label">Deepest knee</p>
+          <p class="kpi-value num" id="k1-value">–</p>
+          <p class="kpi-sub" id="k1-sub"></p>
+        </div>
+        <div class="kpi">
+          <p class="kpi-label" id="k2-label">Good form</p>
+          <p class="kpi-value num" id="k2-value">–</p>
+          <p class="kpi-sub" id="k2-sub"></p>
+        </div>
+        <div class="kpi">
+          <p class="kpi-label" id="k3-label">Most torso lean</p>
+          <p class="kpi-value num" id="k3-value">–</p>
+          <p class="kpi-sub" id="k3-sub"></p>
+        </div>
+      </section>
+
+      <!-- The knee angle over the set, against the depth line, with the thresholds that judge it -->
+      <section class="panel trace">
+        <div class="panel-head">
+          <h2 id="chart-title">Knee angle</h2>
+          <p class="panel-meta" id="chart-meta"></p>
+        </div>
+        <div class="chart" id="chart"></div>
+        <p class="chart-empty" id="chart-empty" hidden></p>
+        <div class="thresholds">
+          <div class="threshold-fields" id="squat-settings">
+            <label class="field">
+              <span class="field-label">Depth line <output class="num" id="depth-out">{{ depth|int }}°</output></span>
+              <input type="range" id="depth" min="70" max="130" step="1" value="{{ depth|int }}">
+            </label>
+            <label class="field">
+              <span class="field-label">Max torso lean <output class="num" id="max-lean-out">{{ max_lean|int }}°</output></span>
+              <input type="range" id="max-lean" min="20" max="70" step="1" value="{{ max_lean|int }}">
+            </label>
+          </div>
+          <button class="btn" id="rerun" hidden>Re-analyze</button>
+        </div>
+      </section>
+
+      <!-- Completed reps -->
+      <section class="panel reps" id="reps-panel">
+        <div class="panel-head">
+          <h2>Reps</h2>
+          <button class="text-btn" id="live-reset" hidden>Reset</button>
+        </div>
+        <div class="rep-scroll">
+          <table class="rep-table" id="rep-table">
+            <thead>
+              <tr><th>Rep</th><th>Form</th><th class="num">Bottom knee</th><th class="num">Most lean</th><th class="num">At</th></tr>
+            </thead>
+            <tbody id="rep-list"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="reps-empty">Completed reps appear here.</p>
+      </section>
+    </div>
+  </main>
+
+  <script src="{{ url_for('static', filename='charts.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

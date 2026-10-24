@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+runs/
+models/
+# test output and scratch files in the project root
+/*.csv
+/*.mp4
+.taste-skill/
+.claude/

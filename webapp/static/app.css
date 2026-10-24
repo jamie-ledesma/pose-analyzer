@@ -1,0 +1,360 @@
+/* True-black flat: one ground, elevation by lightness, colour only on data.
+   USC gold is the one data hue (the knee-angle trace); a lifted cardinal marks form faults.
+   Buttons, tabs and navigation stay neutral; the primary action is an inverted white pill. */
+
+:root {
+  --ground: #000000;
+  --surface: #111111;       /* panels */
+  --raised: #1c1c1c;        /* nested wells, hover */
+  --line: #1f1f1f;          /* top bar rule, dividers inside panels */
+  --control: #666666;       /* outlined buttons, fields: 3.3:1 on #111 */
+  --text: #ffffff;
+  --muted: #b4b4b4;         /* labels, secondary text */
+  --faint: #949494;         /* meta; 6.4:1 on #111 */
+  --nav: #bbbbbb;           /* inactive nav labels; active goes to #fff */
+
+  --data: #ffcc00;          /* USC gold */
+  --positive: #3fc07a; --pill-positive-bg: #172a1d;
+  --negative: #f2555a; --pill-negative-bg: #2e1517;   /* cardinal, lifted to read on black */
+  --warning: #e5a93b;  --pill-warning-bg: #2b2414;
+
+  /* charts.js reads these */
+  --chart-1: var(--data); --chart-2: #8c8c8c; --chart-muted: #5a5a5a;
+  --grid: #222222; --axis-ink: var(--faint); --ink: var(--text);
+
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 16px; --radius-inner: 10px;
+  --gap: 14px; --pad: 20px;
+  --control-h: 36px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font: 14px/20px var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.num { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 6px; }
+
+/* ---------- top bar: logo, the three sources, the exercise and model ---------- */
+.topbar { border-bottom: 1px solid var(--line); }
+.topbar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.logo { width: 36px; height: 36px; border-radius: 8px; display: block; flex: none; }
+.modes { display: flex; gap: 24px; height: 100%; flex: 1; }
+.mode {
+  position: relative;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--nav);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 150ms var(--ease);
+}
+.mode:hover, .mode[aria-current="page"] { color: var(--text); }
+.mode[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--text);
+}
+.switcher {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 8px;
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+.switcher select { min-width: 132px; }
+
+/* ---------- canvas ---------- */
+.canvas { max-width: 1200px; margin: 0 auto; padding: 28px 32px 40px; }
+
+.title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.title-text { min-width: 0; }
+h1 {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.finding { margin-top: 4px; color: var(--muted); }
+.title-actions { display: flex; gap: 8px; flex: none; }
+
+/* ---------- buttons and fields ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--control-h);
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--control);
+  background: transparent;
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 150ms var(--ease), transform 120ms var(--ease);
+}
+.btn:hover { background: var(--raised); }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: var(--text); border-color: var(--text); color: #000; }
+.btn.primary:hover { background: #e6e6e6; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.text-btn { border: 0; background: none; padding: 0; color: var(--muted); font-weight: 500; cursor: pointer; }
+.text-btn:hover { color: var(--text); }
+
+select {
+  height: var(--control-h);
+  padding: 0 32px 0 12px;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--control);
+  background: var(--raised) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 6.5L8 10l3.5-3.5' fill='none' stroke='%23b4b4b4' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center;
+  appearance: none;
+  cursor: pointer;
+}
+input[type="range"] { width: 100%; margin: 0; accent-color: var(--text); cursor: pointer; }
+
+/* ---------- the grid ----------
+   1200 max − 2 × 32 padding = 1136; six columns with five 14px gutters: 6 × 177.67 + 5 × 14 = 1136.
+   Portrait video: 2 columns, 369 × 657; the summary, the trace and the reps share the other 4 and its height.
+   Landscape video: 4 columns, 753 × 424, with the summary and the reps beside it and the trace under it.
+   The reps take what height is left (minmax(0, 1fr)) and scroll inside, so the video sets the block's height. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas:
+    "media media kpis  kpis  kpis  kpis"
+    "media media trace trace trace trace"
+    "media media reps  reps  reps  reps";
+  gap: var(--gap);
+}
+.grid.landscape {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "media media media media kpis  kpis"
+    "media media media media reps  reps"
+    "trace trace trace trace trace trace";
+}
+.grid.no-reps {
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas:
+    "media media kpis  kpis  kpis  kpis"
+    "media media trace trace trace trace";
+}
+.grid.landscape.no-reps {
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "media media media media kpis  kpis"
+    "trace trace trace trace trace trace";
+}
+
+.panel { background: var(--surface); border-radius: var(--radius); padding: var(--pad); min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px; row-gap: 2px; margin-bottom: 14px; }
+.panel-head h2 { flex: none; }
+h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.panel-meta { color: var(--faint); font-size: 12px; text-align: right; }
+
+/* ---------- the video ---------- */
+.media {
+  grid-area: media;
+  align-self: stretch;
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+  aspect-ratio: 9 / 16;
+  display: grid;
+  place-items: center;
+}
+.grid.landscape .media { aspect-ratio: 16 / 9; }
+/* pinned to the panel's edges, so the panel's own size (not the clip's) decides the box */
+.media-el { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; }
+.media-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  max-width: 320px;
+  text-align: center;
+}
+.state-title { font-size: 16px; line-height: 24px; font-weight: 600; }
+.state-note { color: var(--muted); }
+.media-state .btn { margin-top: 8px; }
+.track { width: 220px; height: 4px; border-radius: 999px; background: var(--raised); overflow: hidden; margin-top: 6px; }
+.track-fill { height: 100%; width: 0; background: var(--data); transition: width 200ms linear; }
+.dropzone {
+  position: absolute;
+  inset: 12px;
+  max-width: none;
+  justify-content: center;
+  border: 1px dashed var(--control);
+  border-radius: var(--radius-inner);
+  cursor: pointer;
+  transition: border-color 150ms var(--ease), background 150ms var(--ease);
+}
+.dropzone:hover, .dropzone.dragging { border-color: var(--muted); background: #141414; }
+.media-error {
+  position: absolute;
+  left: 16px; right: 16px; bottom: 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-inner);
+  background: var(--pill-negative-bg);
+  color: var(--negative);
+}
+
+/* ---------- summary: one card split into cells ---------- */
+.kpis { grid-area: kpis; padding: 0; display: grid; grid-template-columns: 1.25fr 1fr 1fr 1fr; }
+.kpi { padding: 18px var(--pad); min-width: 0; }
+.kpi + .kpi { border-left: 1px solid var(--line); }
+.kpi-label { color: var(--muted); font-size: 12px; line-height: 16px; }
+.kpi-value { margin-top: 6px; font-size: 24px; line-height: 32px; font-weight: 500; letter-spacing: -0.01em; white-space: nowrap; }
+.kpi.lead .kpi-value { font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: -0.02em; }
+.kpi-sub { margin-top: 2px; color: var(--faint); font-size: 12px; line-height: 16px; min-height: 16px; }
+.kpi-sub.bad { color: var(--negative); }
+.kpi-value .unit { color: var(--faint); font-size: 0.6em; font-weight: 400; margin-left: 3px; }
+.kpi-value.dash { color: var(--faint); }
+
+/* beside a landscape video: a 2 × 2 grid, or one column when there are no reps under it */
+.grid.landscape .kpis { grid-template-columns: 1fr 1fr; }
+.grid.landscape .kpi:nth-child(3) { border-left: 0; }
+.grid.landscape .kpi:nth-child(n + 3) { border-top: 1px solid var(--line); }
+.grid.landscape.no-reps .kpis { grid-template-columns: 1fr; }
+.grid.landscape.no-reps .kpi { border-left: 0; }
+.grid.landscape.no-reps .kpi + .kpi { border-top: 1px solid var(--line); }
+
+/* ---------- knee-angle trace and its thresholds ---------- */
+.trace { grid-area: trace; display: flex; flex-direction: column; }
+.chart { position: relative; min-height: 180px; }
+.grid.no-reps .chart { flex: 1; }
+.chart-empty {
+  display: grid;
+  place-items: center;
+  height: 180px;
+  border: 1px dashed var(--control);
+  border-radius: var(--radius-inner);
+  color: var(--muted);
+  padding: 0 24px;
+  text-align: center;
+}
+.thresholds {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.threshold-fields { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.field-label { display: flex; justify-content: space-between; font-weight: 500; }
+.field-label output { color: var(--muted); font-weight: 400; }
+
+/* ---------- reps ---------- */
+.reps { grid-area: reps; display: flex; flex-direction: column; min-height: 0; }
+.reps .panel-head { margin-bottom: 6px; }
+.rep-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+.rep-table { width: 100%; border-collapse: collapse; }
+.rep-table th {
+  height: 32px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+  text-align: left;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+}
+.rep-table td { height: 40px; border-top: 1px solid var(--line); }
+.rep-table .num { text-align: right; }
+.rep-table td.num { color: var(--muted); }
+.rep-table td:first-child { font-weight: 500; }
+.rep-table .dash { color: var(--faint); }
+.pill { display: inline-block; white-space: nowrap; font-size: 12px; line-height: 20px; font-weight: 500; padding: 0 8px; border-radius: 999px; }
+.pill.good { background: var(--pill-positive-bg); color: var(--positive); }
+.pill.fault { background: var(--pill-negative-bg); color: var(--negative); }
+.pill.miss { background: var(--pill-warning-bg); color: var(--warning); }
+.empty { color: var(--muted); padding-top: 8px; }
+
+/* ---------- narrow top bar: the model select folds away before the bar runs out of room ---------- */
+@media (max-width: 760px) {
+  .model-pick { display: none; }
+}
+
+/* ---------- tablet: one column, the video first ---------- */
+@media (max-width: 860px) {
+  .topbar-inner, .canvas { padding-left: 24px; padding-right: 24px; }
+  .grid, .grid.landscape, .grid.no-reps, .grid.landscape.no-reps {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: "media" "kpis" "trace" "reps";
+  }
+  .grid.no-reps, .grid.landscape.no-reps { grid-template-areas: "media" "kpis" "trace"; }
+  .media { aspect-ratio: auto; height: min(72vh, 640px); min-height: 360px; }
+  .grid.landscape .media { aspect-ratio: 16 / 9; height: auto; min-height: 0; }
+  .grid.landscape .kpis, .grid.landscape.no-reps .kpis { grid-template-columns: 1.25fr 1fr 1fr 1fr; }
+  .grid.landscape .kpi + .kpi, .grid.landscape.no-reps .kpi + .kpi { border-left: 1px solid var(--line); border-top: 0; }
+  .rep-scroll { max-height: 320px; }
+}
+
+/* ---------- phone ---------- */
+@media (max-width: 640px) {
+  .topbar-inner { padding: 0 16px; gap: 12px; height: 56px; }
+  .logo { width: 32px; height: 32px; }
+  .modes { gap: 14px; }
+  .long { display: none; }
+  .switcher { padding-left: 12px; }
+  .switcher select { min-width: 0; }
+  .canvas { padding: 20px 16px 32px; }
+  .title-row { flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 16px; }
+  h1 { white-space: normal; }
+  .title-actions .btn { flex: 1; }
+  .media { height: 62vh; min-height: 340px; }
+  .kpis, .grid.landscape .kpis, .grid.landscape.no-reps .kpis { grid-template-columns: 1fr 1fr; }
+  .kpi + .kpi, .grid.landscape .kpi + .kpi, .grid.landscape.no-reps .kpi + .kpi { border-left: 1px solid var(--line); border-top: 0; }
+  .kpi:nth-child(3), .grid.landscape .kpi:nth-child(3), .grid.landscape.no-reps .kpi:nth-child(3) { border-left: 0; }
+  .kpi:nth-child(n + 3), .grid.landscape .kpi:nth-child(n + 3), .grid.landscape.no-reps .kpi:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .kpi.lead .kpi-value { font-size: 28px; line-height: 36px; }
+  .threshold-fields { grid-template-columns: 1fr; gap: 16px; }
+  .thresholds { flex-direction: column; align-items: stretch; }
+  .btn, select { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
