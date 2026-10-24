@@ -9,14 +9,14 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 </head>
-<body>
+<body{% if hosted %} data-hosted{% endif %}>
   <header class="topbar">
     <div class="topbar-inner">
       <img class="logo" src="{{ url_for('static', filename='usc-prept-logo.webp') }}"
            alt="USC Pre-Physical Therapy Club" width="36" height="36">
       <nav class="modes" aria-label="Video source">
         <button class="mode" data-mode="example" aria-current="page">Example</button>
-        <button class="mode" data-mode="live">Live<span class="long"> camera</span></button>
+        {% if not hosted %}<button class="mode" data-mode="live">Live<span class="long"> camera</span></button>{% endif %}
         <button class="mode" data-mode="upload">Upload</button>
       </nav>
       <div class="switcher">
@@ -81,6 +81,7 @@
           <input type="file" id="file-input" accept="video/*,.mp4,.mov,.m4v,.avi,.webm,.mkv" hidden>
           <p class="state-title">Drop a video here</p>
           <p class="state-note">MP4 or MOV from your phone, filmed from the front with your whole body in frame.</p>
+          {% if hosted %}<p class="state-note">The video is sent to this server for analysis and deleted after an hour.</p>{% endif %}
           <button type="button" class="btn primary" id="choose-file">Choose a video</button>
         </label>
 

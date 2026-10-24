@@ -39,6 +39,19 @@ Open http://127.0.0.1:5055. The first start analyzes the example clip, which tak
 
 The server listens on 127.0.0.1 only, so it is not reachable from other computers.
 
+## Host it online
+
+The app also runs on a server, with the Example and Upload tabs only. The live camera is switched off there, because a server's camera is not the visitor's and the video would leave their device. Uploaded videos are deleted after an hour, and uploads are capped at 200 MB.
+
+The `Dockerfile` builds that version and works on any host that runs containers (Hugging Face Spaces, Render, Fly.io and similar):
+
+```bash
+docker build -t pose-analyzer .
+docker run -p 7860:7860 pose-analyzer
+```
+
+It sets `HOSTED=1`, downloads the pose models during the build, and listens on `$PORT` (7860 by default). The app keeps upload jobs in memory, so run a single instance. It is not suited to serverless platforms such as Vercel: the dependencies are too large, uploads and analysis take too long, and there is no camera.
+
 ## How reps are judged
 
 | Check | Default |

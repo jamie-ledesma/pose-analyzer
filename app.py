@@ -9,6 +9,7 @@ The server only listens on this computer (127.0.0.1).
 """
 
 import argparse
+import os
 import re
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from webapp.live import LiveSession
 
 ROOT = Path(__file__).resolve().parent
 SAMPLE = ROOT / "samples" / "squat_front.mp4"
+UPLOAD_LIFETIME_S = 3600  # hosted mode: uploads and results are deleted after an hour
 JOB_ID = re.compile(rf"^([0-9a-f]{{12}}|{EXAMPLE_ID})$")
 
 
@@ -41,11 +43,15 @@ def parse_settings(data) -> Settings:
                     thresholds=SquatThresholds(max_torso_lean=max_lean, depth=depth))
 
 
-def create_app(camera: int | str = 0, runs_dir: Path = ROOT / "runs") -> Flask:
+def create_app(camera: int | str = 0, runs_dir: Path = ROOT / "runs", hosted: bool | None = None) -> Flask:
+    """hosted=True (or HOSTED=1 in the environment) is for running on a server: no live camera,
+    smaller uploads, and finished uploads deleted after an hour."""
+    if hosted is None:
+        hosted = os.environ.get("HOSTED") == "1"
     app = Flask(__name__, template_folder="webapp/templates", static_folder="webapp/static")
-    app.config["MAX_CONTENT_LENGTH"] = 2 * 1024**3  # 2 GB uploads
+    app.config["MAX_CONTENT_LENGTH"] = (200 * 1024**2) if hosted else (2 * 1024**3)
     live = LiveSession(camera)
-    jobs = JobStore(runs_dir)
+    jobs = JobStore(runs_dir, max_age=UPLOAD_LIFETIME_S if hosted else None)
     # Analysis code the cached example depends on: re-analyze it when any of this changes.
     jobs.add_example(SAMPLE, sources=sorted((ROOT / "pose").glob("*.py")))
 
@@ -53,7 +59,13 @@ def create_app(camera: int | str = 0, runs_dir: Path = ROOT / "runs") -> Flask:
     def index():
         defaults = SquatThresholds()
         return render_template("index.html", max_lean=defaults.max_torso_lean, depth=defaults.depth,
-                               camera_is_file=isinstance(camera, str))
+                               camera_is_file=isinstance(camera, str), hosted=hosted)
+
+    @app.before_request
+    def no_live_camera_on_a_server():
+        # A server's camera is not the visitor's, and video would leave the visitor's device.
+        if hosted and (request.path.startswith("/api/live") or request.path == "/live.mjpg"):
+            abort(404, "The live camera is only available when the app runs on your own computer")
 
     # Live camera
     @app.post("/api/live/start")
@@ -130,7 +142,10 @@ def create_app(camera: int | str = 0, runs_dir: Path = ROOT / "runs") -> Flask:
     @app.errorhandler(400)
     @app.errorhandler(404)
     @app.errorhandler(409)
+    @app.errorhandler(413)
     def error(exc):
+        if exc.code == 413:
+            return jsonify({"error": f"That video is too large. The limit is {app.config['MAX_CONTENT_LENGTH'] // 1024**2} MB."}), 413
         return jsonify({"error": exc.description}), exc.code
 
     return app
@@ -138,14 +153,16 @@ def create_app(camera: int | str = 0, runs_dir: Path = ROOT / "runs") -> Flask:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--port", type=int, default=5055)
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 5055)))
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="address to listen on; the default only accepts connections from this computer")
     parser.add_argument("--camera", default="0",
                         help="camera index (0 = built-in camera) or a video file to loop as a stand-in camera")
     args = parser.parse_args()
     camera = int(args.camera) if args.camera.isdigit() else args.camera
     app = create_app(camera)
-    print(f"Open http://127.0.0.1:{args.port}")
-    app.run(host="127.0.0.1", port=args.port, threaded=True)
+    print(f"Open http://{'127.0.0.1' if args.host == '0.0.0.0' else args.host}:{args.port}")
+    app.run(host=args.host, port=args.port, threaded=True)
 
 
 if __name__ == "__main__":

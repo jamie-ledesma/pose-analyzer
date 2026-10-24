@@ -1,0 +1,10 @@
+.venv
+.git
+__pycache__
+runs
+models
+docs
+*.mp4
+!samples/squat_front.mp4
+*.csv
+.claude

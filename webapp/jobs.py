@@ -4,6 +4,7 @@ import csv
 import json
 import shutil
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -20,10 +21,13 @@ EXAMPLE_ID = "example"
 class JobStore:
     """Keeps uploaded videos and their results under `root/<job id>/`."""
 
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, max_age: float | None = None):
+        """max_age: seconds after which a finished upload and its files are deleted (None keeps them)."""
         self.root = root
+        self.max_age = max_age
         self.root.mkdir(parents=True, exist_ok=True)
         self._jobs: dict[str, dict] = {}
+        self._born: dict[str, float] = {}
         self._lock = threading.Lock()
 
     def create(self, upload: FileStorage, settings: Settings) -> str:
@@ -32,6 +36,7 @@ class JobStore:
         if ext not in VIDEO_EXTENSIONS:
             raise ValueError(f"Unsupported file type '{ext or name}'. Use one of: {', '.join(sorted(VIDEO_EXTENSIONS))}")
 
+        self._prune()
         job_id, folder = self._new_folder()
         input_path = folder / f"input{ext}"
         upload.save(input_path)
@@ -86,7 +91,21 @@ class JobStore:
         job_id = uuid.uuid4().hex[:12]
         folder = self.root / job_id
         folder.mkdir()
+        self._born[job_id] = time.monotonic()
         return job_id, folder
+
+    def _prune(self) -> None:
+        """Deletes finished jobs older than max_age. The example is never pruned."""
+        if self.max_age is None:
+            return
+        with self._lock:
+            old = [j for j, born in self._born.items()
+                   if time.monotonic() - born > self.max_age and self._jobs.get(j, {}).get("status") != "running"]
+            for job_id in old:
+                self._jobs.pop(job_id, None)
+                del self._born[job_id]
+        for job_id in old:
+            shutil.rmtree(self.root / job_id, ignore_errors=True)
 
     def _start(self, job_id: str, name: str, input_path: Path, settings: Settings,
                report_path: Path | None = None) -> None:

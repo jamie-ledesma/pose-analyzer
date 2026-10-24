@@ -155,7 +155,9 @@ function renderHeader(v, squat) {
   } else if (job?.status === "uploading") finding = `Uploading ${job.filename}`;
   else if (job?.status === "running") finding = mode === "example" ? `${job.label}.` : `Analyzing ${job.filename}`;
   else if (job?.status === "error") finding = "That video could not be analyzed.";
-  else finding = "Film a squat from the front on your phone and drop it in. It is analyzed on this computer.";
+  else finding = document.body.hasAttribute("data-hosted")
+    ? "Film a squat from the front on your phone and upload it."
+    : "Film a squat from the front on your phone and drop it in. It is analyzed on this computer.";
   $("finding").textContent = finding;
 
   const primary = $("primary");
