@@ -86,12 +86,19 @@ class LiveSession:
                           if not is_file else f"Could not open video source: {self.source}")
             return
 
+        if not is_file:  # 720p is plenty for pose tracking and keeps the analysis near real time
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         frame_period = 1.0 / fps
         analyzer: Analyzer | None = None
         start = time.monotonic()
         last_ts = -1
         tick, ticks = time.monotonic(), 0
+        last_frame = time.monotonic()
+        got_frame = False
+        reopened = 0
         try:
             while not self._stop.is_set():
                 loop_start = time.monotonic()
@@ -100,8 +107,27 @@ class LiveSession:
                     if is_file:
                         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         continue
-                    self.error = "The camera stopped sending frames."
-                    break
+                    # A camera takes a couple of seconds to deliver its first frame after opening
+                    # (macOS), so wait a while before giving up.
+                    stalled = time.monotonic() - last_frame
+                    if got_frame and stalled > 2.0 and reopened < 2:
+                        # The camera stalled mid-stream: close it and open it again before giving up.
+                        reopened += 1
+                        cap.release()
+                        time.sleep(0.5)
+                        cap = cv2.VideoCapture(self.source)
+                        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+                        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+                        got_frame, last_frame = False, time.monotonic()
+                        continue
+                    if stalled > (3.0 if got_frame else 12.0):
+                        self.error = ("The camera stopped sending frames." if got_frame else
+                                      "The camera opened but sent no video. Close other apps using it "
+                                      "(FaceTime, Zoom, a browser tab) and try again.")
+                        break
+                    time.sleep(0.05)
+                    continue
+                got_frame, last_frame = True, time.monotonic()
                 if not is_file:
                     frame = cv2.flip(frame, 1)  # mirror, like a selfie view
 
